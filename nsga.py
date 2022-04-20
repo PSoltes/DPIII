@@ -153,13 +153,12 @@ class SingleCOE(Problem):
     # solar, loads, prices m intervals long array
     def get_emissions_for_pop_scenario(self, pop, loads, solar, total_load):
         # array n individuals * m intervals
-        non_negative_grid_loads = [
-            max(0, self.get_grid_loads(x, loads, solar)) for x in pop]
+        non_negative_grid_loads = [[max(0, y) for y in self.get_grid_loads(x, loads, solar)] for x in pop]
         # need to add battery emissions for this time window eg. battery_emissions / lifespan * timewindow
         emissions_of_grid = [sum(x) for x in np.multiply(
             non_negative_grid_loads, 11)]     # there is value for texas need to import it
         f_emissions = np.full((len(pop)), 0) if total_load == 0 else np.divide(
-                emissions_of_grid, self.total_load)
+                emissions_of_grid, total_load)
 
         return f_emissions
 

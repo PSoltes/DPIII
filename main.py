@@ -12,6 +12,7 @@ from pymoo.factory import get_crossover, get_termination
 from pymoo.optimize import minimize
 import json
 from nsga import SingleCOE, MySampling, MyMutation, MyDuplicateElimination
+from scenarios import create_scenarios
 
 data_path = '../data'
 results_path = '../results'
@@ -31,9 +32,17 @@ if __name__ == "__main__":
     for index, row in solar_df.iterrows():
         bat_params = {}
         timewindow_prices = prices_series[i:i + 192].values
-        df = pd.DataFrame({'lmp_avg': timewindow_prices, 'solar': row,
-                          'energy_consumption': consumption_df.loc[index]})
-        array_dfs = [df.copy() for i in range(10)]
+        original_loads = consumption_df.loc[index].to_list()
+        original_solar = row.to_list()
+        (loads_scenarios, solar_scenarios) = create_scenarios(
+            9, original_loads, original_solar)
+        loads_scenarios.append(original_loads)
+        solar_scenarios.append(original_solar)
+        array_dfs = []
+        for i in range(len(loads_scenarios)):
+            array_dfs.append(pd.DataFrame({'lmp_avg': timewindow_prices, 'solar': solar_scenarios[i],
+                                           'energy_consumption': loads_scenarios[i]}))
+
         with open(f'{data_path}/batteries.json', 'r') as file:
             bat_params = json.load(file)
 
