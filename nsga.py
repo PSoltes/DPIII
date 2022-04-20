@@ -2,15 +2,11 @@ from re import VERBOSE
 import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.core.sampling import Sampling
-from pymoo.core.crossover import Crossover
 from pymoo.core.mutation import Mutation
-from pymoo.core.population import Population
 from pymoo.core.duplicate import ElementwiseDuplicateElimination
-import pandas as pd
-from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.factory import get_sampling, get_crossover, get_mutation, get_termination
-from pymoo.optimize import minimize
-import json
+
+data_path = '../data'
+results_path = '../results'
 
 
 class MyDuplicateElimination(ElementwiseDuplicateElimination):
@@ -39,8 +35,12 @@ class MyMutation(Mutation):
         rng = np.random.default_rng()
 
         # for each individual
+        # n individuals in population
+        # m battery states for each individual
+        # X is n*m array
         for i in range(len(X)):
             r = np.random.rand()
+            # in kWh
             battery_discharge_limit = problem.battery_params['max_discharge_rate']
             if r < self.probability:
                 newXi = np.empty(len(X[i]))
@@ -71,40 +71,6 @@ class MyMutation(Mutation):
                     low=problem.xl[idx], high=problem.xu[idx]) for idx, bat_value in enumerate(X[i])]
 
         return X
-
-
-class MyCrossover(Crossover):
-    def __init__(self):
-        super().__init__(2, 2)
-
-    def _do(self, problem, X, **kwargs):
-
-        # The input of has the following shape (n_parents, n_matings, n_var)
-        _, n_matings, n_var = X.shape
-
-        # The output owith the shape (n_offsprings, n_matings, n_var)
-        # Because there the number of parents and offsprings are equal it keeps the shape of X
-        Y = np.full_like(X, None, dtype=np.object)
-
-        # for each mating provided
-        for k in range(n_matings):
-
-            a, b = X[0, k], X[1, k]
-            off_a = np.full((n_var, len(problem.loads)), None)
-            off_b = np.full((n_var, len(problem.loads)), None)
-            for i in range(n_var):
-                for j in range(len(problem.loads)):
-                    if np.random.rand() < 0.5:
-                        off_a[i][j] = a[i][j]
-                        off_b[i][j] = b[i][j]
-                    else:
-                        off_a[i][j] = b[i][j]
-                        off_b[i][j] = a[i][j]
-            Y[0, k], Y[1, k] = off_a, off_b
-
-        print(Y)
-
-        return Y
 
 
 class MySampling(Sampling):
@@ -141,11 +107,15 @@ class SingleCOE(Problem):
                              (len(problem_data[0]['energy_consumption'])), xl),
                          xu=np.full((len(problem_data[0]['energy_consumption'])), xu))
         self.conversion_rate_to_kwh = conversion_rate_to_kwh
+        # loads for n scenarios -> n scenarios, each having 2 days worth of fuzzied loads for each interval
         self.loads = [np.array(df['energy_consumption'])
                       * conversion_rate_to_kwh for df in problem_data]
+        # prices for n scenarios
         self.prices = [np.array(df['lmp_avg']) for df in problem_data]
+        # solar for n scenarios
         self.solar = [np.array(df['solar']) *
                       conversion_rate_to_kwh for df in problem_data]
+        # sum of all loads in scenario eg. array of n (scenarios) numbers
         self.total_load = [sum(x) for x in self.loads]
         self.battery_params = battery_params
         self.initial_battery_charge = initial_battery_charge
@@ -166,37 +136,48 @@ class SingleCOE(Problem):
                 loads[i] - (solar[i] - battery_deltas[i]))
         return grid_loads
 
-    # X0 - power gotten from grid, buy -> +, sell -> -
-    # X1 - power status of battery
+    # X0 - power status of battery
+
+    # pop of n individuals having battery states for 192 intervals in 2 days
+    # solar, loads, prices m intervals long array
+    def get_prices_for_pop_scenario(self, pop, loads, solar, prices, total_load):
+        # array n individuals * m intervals
+        grid_loads = [self.get_grid_loads(x, loads, solar) for x in pop]
+        price_of_energy = [sum(x) for x in np.multiply(grid_loads, prices)]
+        f_price = np.full((len(pop)), 0) if total_load == 0 else np.divide(
+            price_of_energy, total_load)
+
+        return f_price
+
+    # pop of n individuals having battery states for 192 intervals in 2 days
+    # solar, loads, prices m intervals long array
+    def get_emissions_for_pop_scenario(self, pop, loads, solar, total_load):
+        # array n individuals * m intervals
+        non_negative_grid_loads = [
+            max(0, self.get_grid_loads(x, loads, solar)) for x in pop]
+        # need to add battery emissions for this time window eg. battery_emissions / lifespan * timewindow
+        emissions_of_grid = [sum(x) for x in np.multiply(
+            non_negative_grid_loads, 11)]     # there is value for texas need to import it
+        f_emissions = np.full((len(pop)), 0) if total_load == 0 else np.divide(
+                emissions_of_grid, self.total_load)
+
+        return f_emissions
 
     def _evaluate(self, X, out, *args, **kwargs):
-        total_price = 0
-        emissions = 0
+        price_sum_for_each_scenario = 0
+        emissions_sum_for_each_scenario = 0
         for i in range(len(self.loads)):
-            grid_loads = [self.get_grid_loads(
-                x, self.loads[i], self.solar[i]) for x in X]
-            non_negative_grid_loads = [
-                [max(0, xi) for xi in x] for x in grid_loads]
-            price_of_energy = [sum(x) for x in np.multiply(
-                grid_loads, self.prices[i])]
-            # there is value for texas need to import it
-            emissions_of_grid = [sum(x) for x in np.multiply(
-                non_negative_grid_loads, 11)]
-            # there is value for this, need to import
-            emissions_of_solar = sum(np.multiply(self.solar[i], 5))
-            # need to add battery emissions for this time window eg. battery_emissions / lifespan * timewindow
-            total_emisions = emissions_of_grid + emissions_of_solar
-            f_price = np.full((len(X)), 0) if self.total_load[i] == 0 else np.divide(
-                price_of_energy, self.total_load[i])
-            f_emissions = np.full((len(X)), 0) if self.total_load[i] == 0 else np.divide(
-                total_emisions, self.total_load[i])
+            price_for_scenario = self.get_prices_for_pop_scenario(
+                X, self.loads[i], self.solar[i], self.prices[i], self.total_load[i])
+            emissions_for_scenario = self.get_emissions_for_pop_scenario(X, self.loads[i], self.solar[i], self.total_load[i])
             maximal_charge_rate = np.array([self.maximal_charge_rate_condition(
                 individual, self.battery_params['max_discharge_rate']) for individual in X])
-            total_price += f_price
-            emissions += f_emissions
+            price_sum_for_each_scenario += price_for_scenario
+            emissions_sum_for_each_scenario += emissions_for_scenario
 
-        all_scenarios_price_f = total_price / len(self.loads)
-        all_scenarios_emissions_f = emissions / len(self.loads)
+        all_scenarios_price_f = price_sum_for_each_scenario / len(self.loads)
+        all_scenarios_emissions_f = emissions_sum_for_each_scenario / \
+            len(self.loads)
 
         out["F"] = np.column_stack(
             [all_scenarios_price_f, all_scenarios_emissions_f])
@@ -213,58 +194,3 @@ class SingleCOE(Problem):
                 total_sum += abs(bat_status[i + 1] -
                                  bat_status[i]) - charge_rate
         return total_sum
-
-
-if __name__ == "__main__":
-    prices = []
-    battery_charges = [0]
-    solar_df = pd.read_csv(
-        './661/fuzzied_solar_15min_aggs_data.csv', index_col='localminute')
-    consumption_df = pd.read_csv(
-        './661/fuzzied_energy_consumption_15min_aggs_data.csv', index_col='localminute')
-    prices_df = pd.read_csv('./661/15min_aggs_data.csv',
-                            index_col='localminute')
-    prices_series = prices_df['lmp_avg']
-    i = 0
-    initial_battery_charge = 0
-    for index, row in solar_df.iterrows():
-        bat_params = {}
-        timewindow_prices = prices_series[i:i + 192].values
-        df = pd.DataFrame({'lmp_avg': timewindow_prices, 'solar': row,
-                          'energy_consumption': consumption_df.loc[index]})
-        array_dfs = [df.copy() for i in range(10)]
-        with open('./batteries.json', 'r') as file:
-            bat_params = json.load(file)
-
-        problem = SingleCOE(array_dfs, bat_params["tesla_powerwall"]
-                            ["max_total_energy"], 0, bat_params["tesla_powerwall"], initial_battery_charge)
-        algorithm = NSGA2(
-            pop_size=40,
-            n_offsprings=40,
-            sampling=MySampling(),
-            crossover=get_crossover("real_ux"),
-            mutation=MyMutation(),
-            eliminate_duplicates=MyDuplicateElimination(),
-        )
-
-        termination = get_termination("time", "00:00:05")
-        res = minimize(problem,
-                       algorithm,
-                       termination,
-                       seed=i,
-                       save_history=True,
-                       verbose=False)
-        prices.append(res.F.tolist())
-        if res.X is not None:
-            result_list = res.X[0] if res.X.ndim == 2 else res.X
-            initial_battery_charge = result_list[0]
-            battery_charges.append(initial_battery_charge)
-            # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
-        i += 1
-        print(i)
-        if i > 10:
-            break
-    with open("./nsga-II-results/pricess.json", "w") as file:
-        json.dump(prices, file)
-    with open("./nsga-II-results/results.json", "w") as file:
-        json.dump(battery_charges, file)

@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 # [charge_to_from_battery, charge_from_grid, gas_generator_state, gas_generator_produce]
 
+data_path = '../data'
+
 
 def is_within_expensive_tarrif(current_datetime):
     if 6 <= current_datetime.hour < 11 or 18 <= current_datetime.hour < 23:
@@ -50,11 +52,11 @@ def compute_management_strat_for_t(row, current_battery_state, battery_params):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv('./661/15min_aggs_data.csv', parse_dates=['localminute'])
+    df = pd.read_csv(f'{data_path}/661/15min_aggs_data.csv', parse_dates=['localminute'])
     battery_params = {}
     current_battery_state = 2
     result_arr = []
-    with open('./tree_strat_batteries.json', 'r') as file:
+    with open(f'{data_path}/tree_strat_batteries.json', 'r') as file:
         battery_params = json.load(file)
     for index, row in df.loc[0:191].iterrows():
         if pd.isna(row['grid']):

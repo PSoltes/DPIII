@@ -1,20 +1,20 @@
 import pandas as pd
 import os
-import shutil
 import json
 from datetime import datetime, timedelta
-import pytz
-from numpy import nan, random, isnat, array
+from numpy import nan, random, array
+
+data_path = '../data'
 
 def get_metadata(csv, unique_data_ids):
     data = pd.read_csv(csv)
     for data_id in unique_data_ids:
         row_index = data.index[data['dataid'] == str(data_id)].to_list()
         print(row_index)
-        if not os.path.isdir(f'./{data_id}'):
-            os.mkdir(f'./{data_id}')
+        if not os.path.isdir(f'{data_path}/{data_id}'):
+            os.mkdir(f'{data_path}/{data_id}')
         data.iloc[[row_index[0]], :].to_csv(
-            f'./{data_id}/meta.csv', index=False, sep=',', header=data.columns)
+            f'{data_path}/{data_id}/meta.csv', index=False, sep=',', header=data.columns)
 
 
 def split_and_transform_data(csv, unique_data_ids):
@@ -25,9 +25,9 @@ def split_and_transform_data(csv, unique_data_ids):
         df['localminute'] = pd.to_datetime(
             df['localminute'], format="%Y-%m-%d %H:%M:%S")
         df = df.sort_values(by=['localminute'])
-        if not os.path.isdir(f'./{data_id}'):
-            os.mkdir(f'./{data_id}')
-        df.to_csv(f'./{data_id}/data.csv', sep=',',
+        if not os.path.isdir(f'{data_path}/{data_id}'):
+            os.mkdir(f'{data_path}/{data_id}')
+        df.to_csv(f'{data_path}/{data_id}/data.csv', sep=',',
                   date_format="%Y-%m-%d %H:%M:%S", index=False)
 
 
@@ -37,8 +37,8 @@ def extract_aggs_from_data(unique_data_ids):  # solar/pv grid all_cols_sum
     for data_id in unique_data_ids:
         to_keep_cols = ['dataid', 'localminute',
                         'grid', 'solar']
-        df = pd.read_csv(f'./{data_id}/data.csv', index_col=False)
-        meta = pd.read_csv(f'./{data_id}/meta.csv')  # total_amount_of_pv
+        df = pd.read_csv(f'{data_path}/{data_id}/data.csv', index_col=False)
+        meta = pd.read_csv(f'{data_path}/{data_id}/meta.csv')  # total_amount_of_pv
         total_amount_of_pv = meta['total_amount_of_pv'][0]
         df = df.drop(axis=1, labels=df.columns.difference(to_keep_cols))
         df['solar'] = df['solar'].fillna(0)
@@ -55,7 +55,7 @@ def extract_aggs_from_data(unique_data_ids):  # solar/pv grid all_cols_sum
         time_df['localminute'] = time_series
         df = pd.concat([df.set_index('localminute'), time_df.set_index(
             'localminute')], axis=1).reset_index()
-        df.to_csv(f'./{data_id}/aggs_data.csv', index=False)
+        df.to_csv(f'{data_path}/{data_id}/aggs_data.csv', index=False)
 
 
 def convert_prices_to_csv(path_to_prices):
@@ -70,7 +70,7 @@ def convert_prices_to_csv(path_to_prices):
         df['localtime'] = df.localtime.dt.tz_localize(None)
         df['localtime'] = df['localtime'].apply(
             lambda x: x - timedelta(hours=6))
-        df.to_csv('./el_prices/spp.csv', index=False)
+        df.to_csv(f'{data_path}/el_prices/spp.csv', index=False)
 
 
 def assign_el_prices_to_1min_aggs(data_ids, path_to_lmp, path_to_spp):
@@ -79,7 +79,7 @@ def assign_el_prices_to_1min_aggs(data_ids, path_to_lmp, path_to_spp):
     for id in data_ids:
         lmp_index = 0
         spp_index = 0
-        data_df = pd.read_csv(f'./{id}/aggs_data.csv',
+        data_df = pd.read_csv(f'{data_path}/{id}/aggs_data.csv',
                               parse_dates=['localminute'])
         data_df['lmp_avg'] = nan
         data_df['spp_avg'] = nan
@@ -90,12 +90,12 @@ def assign_el_prices_to_1min_aggs(data_ids, path_to_lmp, path_to_spp):
                 spp_index += 1
             data_df.at[index, 'lmp_avg'] = lmp.at[lmp_index, 'avg']
             data_df.at[index, 'spp_avg'] = spp.at[spp_index, 'avg']
-        data_df.to_csv(f'./{id}/aggs_data.csv', index=False)
+        data_df.to_csv(f'{data_path}/{id}/aggs_data.csv', index=False)
 
 
 def get_fuzzied_data(data_ids, col):
     for id in data_ids:
-        df = pd.read_csv(f'./{id}/15min_aggs_data.csv')
+        df = pd.read_csv(f'{data_path}/{id}/15min_aggs_data.csv')
         fuzzied_df = pd.DataFrame(columns=['localminute'] + list(range(0,192)))
         first = [df[col][0].tolist()]
         first_hour = array([random.normal(x, 0)
@@ -125,13 +125,13 @@ def get_fuzzied_data(data_ids, col):
             j += 1
             if j % 100 == 0:
                 print(j)
-        fuzzied_df.to_csv(f'./{id}/fuzzied_{col}_15min_aggs_data.csv', index=False)
+        fuzzied_df.to_csv(f'{data_path}/{id}/fuzzied_{col}_15min_aggs_data.csv', index=False)
 
 
 def get_N_min_aggs_data(data_ids, N):
     for id in data_ids:
-        df = pd.read_csv(f'./{id}/aggs_data_fixedNAS.csv')
-        meta = pd.read_csv(f'./{id}/meta.csv')
+        df = pd.read_csv(f'{data_path}/{id}/aggs_data_fixedNAS.csv')
+        meta = pd.read_csv(f'{data_path}/{id}/meta.csv')
         N_min_df = pd.DataFrame()
         N_min_df['localminute'] = df['localminute'].iloc[::N]
         N_min_df = N_min_df.reset_index()
@@ -145,7 +145,7 @@ def get_N_min_aggs_data(data_ids, N):
         N_min_df['lmp_avg'] = grouped_by_df['lmp_avg'] / N
         N_min_df['spp_avg'] = grouped_by_df['spp_avg'] / N
         N_min_df = N_min_df.round(3)
-        N_min_df.to_csv(f'./{id}/{N}min_aggs_data.csv', index=False)
+        N_min_df.to_csv(f'{data_path}/{id}/{N}min_aggs_data.csv', index=False)
 
 
 def fixNA(data_ids):
@@ -154,7 +154,7 @@ def fixNA(data_ids):
     lower_limit_date = datetime.strptime(
         "2018-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
     for id in data_ids:
-        df = pd.read_csv(f'./{id}/aggs_data.csv', parse_dates=["localminute"])
+        df = pd.read_csv(f'{data_path}/{id}/aggs_data.csv', parse_dates=["localminute"])
         nan_rows = df[df["grid"].isna()]
         for index, row in nan_rows.iterrows():
             dates = []
@@ -170,11 +170,11 @@ def fixNA(data_ids):
             df.at[index, "grid"] = aggs["grid"] / len(dates)
             df.at[index, "energy_consumption"] = df.at[index,
                                                        "grid"] + df.at[index, "solar"]
-        df.to_csv(f'./{id}/aggs_data_fixedNAS.csv')
+        df.to_csv(f'{data_path}/{id}/aggs_data_fixedNAS.csv')
 
 def getNA(data_ids):
     for id in data_ids:
-        df = pd.read_csv(f'./{id}/aggs_data_fixedNAS.csv', parse_dates=["localminute"])
+        df = pd.read_csv(f'{data_path}/{id}/aggs_data_fixedNAS.csv', parse_dates=["localminute"])
 
 if __name__ == "__main__":
     unique_data_ids = [661, 1642, 2335, 2818, 3039, 3456, 3538, 4031, 4373, 4767, 5746, 6139, 7536, 7719,
