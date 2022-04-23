@@ -1,16 +1,24 @@
 import json
-def get_prices_aggs(filename):
+import pandas as pd
+from nsga import get_grid_loads
+
+results_path = '../results'
+data_path = '../data'
+
+def get_price_for_optimized_battery_states(filename, starting_index = 0):
+    prices_df = pd.read_csv(f'{data_path}/661/15min_aggs_data.csv',
+                            index_col='localminute')
     with open(filename, "r") as file:
         arr = json.load(file)
-    flattened = []
-    sum = 0
-    for element in arr:
-        el = element[0][0] if type(element[0]) is list else element[0]
-        flattened.append(el)
-        sum += el
-    print(min(flattened))
-    print(max(flattened))
-    print(sum/len(flattened))
+        prices = prices_df['lmp_avg'][starting_index:starting_index + len(arr) -1].values
+        solar = prices_df['solar'][starting_index:starting_index + len(arr) - 1].values
+        loads = prices_df['energy_consumption'][starting_index:starting_index + len(arr) - 1].values
+
+        grid_loads = get_grid_loads(arr[1:], arr[0], loads, solar)
+        price = sum(grid_loads * prices) / len(grid_loads)
+
+        print(price, arr)
+
 
 if __name__ == "__main__":
-    get_prices_aggs("./nsga-II-results/prices.json")
+    get_price_for_optimized_battery_states(f'{results_path}/nsga-II-results/results.json', 0)

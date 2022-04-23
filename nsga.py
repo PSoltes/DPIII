@@ -9,6 +9,23 @@ data_path = '../data'
 results_path = '../results'
 
 
+def get_battery_delta(battery_states, initial_battery_charge):
+    battery_deltas = []
+    battery_deltas.append(battery_states[0] - initial_battery_charge)
+    for i in range(len(battery_states) - 1):
+        battery_deltas.append(battery_states[i + 1] - battery_states[i])
+
+    return battery_deltas
+
+def get_grid_loads(battery_states, initial_battery_charge, loads, solar):
+    grid_loads = []
+    battery_deltas = get_battery_delta(battery_states, initial_battery_charge)
+    for i in range(len(battery_states)):
+        grid_loads.append(
+            loads[i] - (solar[i] - battery_deltas[i]))
+    return grid_loads
+
+
 class MyDuplicateElimination(ElementwiseDuplicateElimination):
 
     def is_equal(self, a, b):
@@ -120,29 +137,13 @@ class SingleCOE(Problem):
         self.battery_params = battery_params
         self.initial_battery_charge = initial_battery_charge
 
-    def get_battery_delta(self, battery_states):
-        battery_deltas = []
-        battery_deltas.append(battery_states[0] - self.initial_battery_charge)
-        for i in range(len(battery_states) - 1):
-            battery_deltas.append(battery_states[i + 1] - battery_states[i])
-
-        return battery_deltas
-
-    def get_grid_loads(self, battery_states, loads, solar):
-        grid_loads = []
-        battery_deltas = self.get_battery_delta(battery_states)
-        for i in range(len(battery_states)):
-            grid_loads.append(
-                loads[i] - (solar[i] - battery_deltas[i]))
-        return grid_loads
-
     # X0 - power status of battery
 
     # pop of n individuals having battery states for 192 intervals in 2 days
     # solar, loads, prices m intervals long array
     def get_prices_for_pop_scenario(self, pop, loads, solar, prices, total_load):
         # array n individuals * m intervals
-        grid_loads = [self.get_grid_loads(x, loads, solar) for x in pop]
+        grid_loads = [get_grid_loads(x, self.initial_battery_charge, loads, solar) for x in pop]
         price_of_energy = [sum(x) for x in np.multiply(grid_loads, prices)]
         f_price = np.full((len(pop)), 0) if total_load == 0 else np.divide(
             price_of_energy, total_load)
@@ -153,7 +154,7 @@ class SingleCOE(Problem):
     # solar, loads, prices m intervals long array
     def get_emissions_for_pop_scenario(self, pop, loads, solar, total_load):
         # array n individuals * m intervals
-        non_negative_grid_loads = [[max(0, y) for y in self.get_grid_loads(x, loads, solar)] for x in pop]
+        non_negative_grid_loads = [[max(0, y) for y in get_grid_loads(x, self.initial_battery_charge, loads, solar)] for x in pop]
         # need to add battery emissions for this time window eg. battery_emissions / lifespan * timewindow
         emissions_of_grid = [sum(x) for x in np.multiply(
             non_negative_grid_loads, 11)]     # there is value for texas need to import it

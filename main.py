@@ -30,7 +30,6 @@ if __name__ == "__main__":
     j = 0
     initial_battery_charge = 0
     for index, row in solar_df.iterrows():
-        print(j)
         bat_params = {}
         timewindow_prices = prices_series[j:j + 192].values
         original_loads = consumption_df.loc[index].to_list()
@@ -73,7 +72,7 @@ if __name__ == "__main__":
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        if j > 10:
+        if j > 192:
             break
     with open(f'{results_path}/nsga-II-results/pricess.json', "w") as file:
         json.dump(prices, file)
