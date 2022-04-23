@@ -113,9 +113,9 @@ def get_fuzzied_data(data_ids, col):
         j = 1
         while j < len(df[col]) - 192:
             first = [df[col][j].tolist()]
-            first_hour = first_hour[1:] + [random.normal(df[col][j + 3], 0)]
-            first_4_hours = first_4_hours[1:] + [random.normal(df[col][j + 15], 0)]
-            rest = rest[1:] + [random.normal(df[col][j + 191], 0)]
+            first_hour = first_hour[1:] + [random.normal(df[col][j + 3], abs(df[col][j + 3] * 0.15))]
+            first_4_hours = first_4_hours[1:] + [random.normal(df[col][j + 15], abs(df[col][j + 15] * 0.25))]
+            rest = rest[1:] + [random.normal(df[col][j + 191], abs(df[col][j + 191] * 0.5))]
             row = [round(x, 3) for x in (first + first_hour + first_4_hours + rest)]
             indexed_row = [df['localminute'][j]] + row
             data_to_append = {}

@@ -27,11 +27,12 @@ if __name__ == "__main__":
     prices_df = pd.read_csv(f'{data_path}/661/15min_aggs_data.csv',
                             index_col='localminute')
     prices_series = prices_df['lmp_avg']
-    i = 0
+    j = 0
     initial_battery_charge = 0
     for index, row in solar_df.iterrows():
+        print(j)
         bat_params = {}
-        timewindow_prices = prices_series[i:i + 192].values
+        timewindow_prices = prices_series[j:j + 192].values
         original_loads = consumption_df.loc[index].to_list()
         original_solar = row.to_list()
         (loads_scenarios, solar_scenarios) = create_scenarios(
@@ -57,7 +58,7 @@ if __name__ == "__main__":
             eliminate_duplicates=MyDuplicateElimination(),
         )
 
-        termination = get_termination("time", "00:00:05")
+        termination = get_termination("time", "00:00:30")
         res = minimize(problem,
                        algorithm,
                        termination,
@@ -70,9 +71,9 @@ if __name__ == "__main__":
             initial_battery_charge = result_list[0]
             battery_charges.append(initial_battery_charge)
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
-        i += 1
-        print(i)
-        if i > 10:
+        j += 1
+        print(j)
+        if j > 10:
             break
     with open(f'{results_path}/nsga-II-results/pricess.json', "w") as file:
         json.dump(prices, file)
