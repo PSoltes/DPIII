@@ -21,10 +21,10 @@ if __name__ == "__main__":
     prices = []
     battery_charges = [0]
     solar_df = pd.read_csv(
-        f'{data_path}/661/fuzzied_solar_15min_aggs_data.csv', index_col='localminute')
+        f'{data_path}/661/2_day_scenarios/fuzzied_solar_scenario_0.csv', index_col='localminute')
     consumption_df = pd.read_csv(
-        f'{data_path}/661/fuzzied_energy_consumption_15min_aggs_data.csv', index_col='localminute')
-    prices_df = pd.read_csv(f'{data_path}/661/15min_aggs_data.csv',
+        f'{data_path}/661/2_day_scenarios/fuzzied_energy_consumption_scenario_0.csv', index_col='localminute')
+    prices_df = pd.read_csv(f'{data_path}/661/2_day_scenarios/scenario_0.csv',
                             index_col='localminute')
     prices_series = prices_df['lmp_avg']
     j = 0
@@ -75,11 +75,11 @@ if __name__ == "__main__":
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        with open(f'{results_path}/nsga-II-results/results1.json', "w") as file:
+        with open(f'{results_path}/nsga-II-results/resultsxx.json', "w") as file:
             json.dump(battery_charges, file)
         if j > 191:
             break
-    with open(f'{results_path}/nsga-II-results/prices1.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/pricesxx.json', "w") as file:
         json.dump(prices, file)
-    with open(f'{results_path}/nsga-II-results/results1.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/resultsxx.json', "w") as file:
         json.dump(battery_charges, file)
