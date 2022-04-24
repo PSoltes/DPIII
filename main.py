@@ -34,14 +34,15 @@ if __name__ == "__main__":
         timewindow_prices = prices_series[j:j + 192].values
         original_loads = consumption_df.loc[index].to_list()
         original_solar = row.to_list()
-        (loads_scenarios, solar_scenarios) = create_scenarios(
+        (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
             9, original_loads, original_solar)
         loads_scenarios.append(original_loads)
         solar_scenarios.append(original_solar)
-        array_dfs = []
+        grid_availability.append(np.full(len(original_loads), True).tolist())
+        array_dfs = [] 
         for i in range(len(loads_scenarios)):
             array_dfs.append(pd.DataFrame({'lmp_avg': timewindow_prices, 'solar': solar_scenarios[i],
-                                           'energy_consumption': loads_scenarios[i]}))
+                                           'energy_consumption': loads_scenarios[i], 'grid_available': grid_availability[i]}))
 
         with open(f'{data_path}/batteries.json', 'r') as file:
             bat_params = json.load(file)
@@ -57,7 +58,7 @@ if __name__ == "__main__":
             eliminate_duplicates=MyDuplicateElimination(),
         )
 
-        termination = get_termination("time", "00:02:25")
+        termination = get_termination("time", "00:00:05")
         res = minimize(problem,
                        algorithm,
                        termination,

@@ -17,6 +17,7 @@ def get_battery_delta(battery_states, initial_battery_charge):
 
     return battery_deltas
 
+
 def get_grid_loads(battery_states, initial_battery_charge, loads, solar):
     grid_loads = []
     battery_deltas = get_battery_delta(battery_states, initial_battery_charge)
@@ -127,6 +128,8 @@ class SingleCOE(Problem):
         # loads for n scenarios -> n scenarios, each having 2 days worth of fuzzied loads for each interval
         self.loads = [np.array(df['energy_consumption'])
                       * conversion_rate_to_kwh for df in problem_data]
+        self.grid_availability = [
+            np.array(df['grid_available']) for df in problem_data]
         # prices for n scenarios
         self.prices = [np.array(df['lmp_avg']) for df in problem_data]
         # solar for n scenarios
@@ -143,7 +146,8 @@ class SingleCOE(Problem):
     # solar, loads, prices m intervals long array
     def get_prices_for_pop_scenario(self, pop, loads, solar, prices, total_load):
         # array n individuals * m intervals
-        grid_loads = [get_grid_loads(x, self.initial_battery_charge, loads, solar) for x in pop]
+        grid_loads = [get_grid_loads(
+            x, self.initial_battery_charge, loads, solar) for x in pop]
         price_of_energy = [sum(x) for x in np.multiply(grid_loads, prices)]
         f_price = np.full((len(pop)), 0) if total_load == 0 else np.divide(
             price_of_energy, total_load)
@@ -154,12 +158,13 @@ class SingleCOE(Problem):
     # solar, loads, prices m intervals long array
     def get_emissions_for_pop_scenario(self, pop, loads, solar, total_load):
         # array n individuals * m intervals
-        non_negative_grid_loads = [[max(0, y) for y in get_grid_loads(x, self.initial_battery_charge, loads, solar)] for x in pop]
+        non_negative_grid_loads = [[max(0, y) for y in get_grid_loads(
+            x, self.initial_battery_charge, loads, solar)] for x in pop]
         # need to add battery emissions for this time window eg. battery_emissions / lifespan * timewindow
         emissions_of_grid = [sum(x) for x in np.multiply(
             non_negative_grid_loads, 11)]     # there is value for texas need to import it
         f_emissions = np.full((len(pop)), 0) if total_load == 0 else np.divide(
-                emissions_of_grid, total_load)
+            emissions_of_grid, total_load)
 
         return f_emissions
 
@@ -169,7 +174,8 @@ class SingleCOE(Problem):
         for i in range(len(self.loads)):
             price_for_scenario = self.get_prices_for_pop_scenario(
                 X, self.loads[i], self.solar[i], self.prices[i], self.total_load[i])
-            emissions_for_scenario = self.get_emissions_for_pop_scenario(X, self.loads[i], self.solar[i], self.total_load[i])
+            emissions_for_scenario = self.get_emissions_for_pop_scenario(
+                X, self.loads[i], self.solar[i], self.total_load[i])
             maximal_charge_rate = np.array([self.maximal_charge_rate_condition(
                 individual, self.battery_params['max_discharge_rate']) for individual in X])
             price_sum_for_each_scenario += price_for_scenario
