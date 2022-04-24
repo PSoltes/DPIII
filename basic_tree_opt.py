@@ -4,6 +4,7 @@ import numpy as np
 # [charge_to_from_battery, charge_from_grid, gas_generator_state, gas_generator_produce]
 
 data_path = '../data'
+result_path = '../results'
 
 
 def is_within_expensive_tarrif(current_datetime):
@@ -67,10 +68,10 @@ if __name__ == "__main__":
                 row, current_battery_state, battery_params['tesla_powerwall'])
             current_battery_state += result[1]
             result_arr.append([result[0], row['energy_consumption'],
-                               current_battery_state, result[2], result[2]*(row['lmp_avg']/4), False])
+                               current_battery_state, result[2], result[2] / 4*row['lmp_avg'], False])
     result_df = pd.DataFrame(data=result_arr, columns=[
                              'localminute', 'load', 'battery_state', 'grid', 'price', 'missing_data'])
-    result_df.to_csv('./661/tree_strat.csv', index=False)
-    df = pd.read_csv('./661/tree_strat.csv')
+    result_df.to_csv(f'{result_path}/tree_strat.csv', index=False)
+    df = pd.read_csv(f'{result_path}/tree_strat.csv')
     df = df.fillna(0, axis=1)
     print(df['price'].sum()/(df['load'].sum()/4))

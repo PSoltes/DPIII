@@ -14,11 +14,15 @@ def get_price_for_optimized_battery_states(filename, starting_index = 0):
         solar = prices_df['solar'][starting_index:starting_index + len(arr) - 1].values
         loads = prices_df['energy_consumption'][starting_index:starting_index + len(arr) - 1].values
 
-        grid_loads = get_grid_loads(arr[1:], arr[0], loads, solar)
-        price = sum(grid_loads * prices) / len(grid_loads)
+        grid_loads = get_grid_loads(arr[1:], arr[0], loads/4, solar/4)
+        price = sum(grid_loads * prices) / sum(loads/4)
 
-        print(price, arr)
+        df = pd.DataFrame({'solar': solar / 4, 'energy_consumption': loads / 4, 'load': grid_loads, 'battery': arr[1:], 'prices': prices})
+        df.to_csv(f'{results_path}/nsga.csv', index=False)
+
+
+        print(price)
 
 
 if __name__ == "__main__":
-    get_price_for_optimized_battery_states(f'{results_path}/nsga-II-results/results.json', 0)
+    get_price_for_optimized_battery_states(f'{results_path}/nsga-II-results/results1.json', 0)

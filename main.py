@@ -57,24 +57,29 @@ if __name__ == "__main__":
             eliminate_duplicates=MyDuplicateElimination(),
         )
 
-        termination = get_termination("time", "00:00:30")
+        termination = get_termination("time", "00:02:25")
         res = minimize(problem,
                        algorithm,
                        termination,
                        seed=i,
                        save_history=True,
                        verbose=False)
-        prices.append(res.F.tolist())
+        res_F = res.F.tolist()
+        res_F_prices = [x[0] for x in res_F] if res.F.ndim == 2 else [res_F[0]]
+        best_price_index = res_F_prices.index(max(res_F_prices))
+        prices.append(res_F)
         if res.X is not None:
-            result_list = res.X[0] if res.X.ndim == 2 else res.X
+            result_list = res.X[best_price_index] if res.X.ndim == 2 else res.X
             initial_battery_charge = result_list[0]
             battery_charges.append(initial_battery_charge)
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        if j > 192:
+        with open(f'{results_path}/nsga-II-results/results1.json', "w") as file:
+            json.dump(battery_charges, file)
+        if j > 191:
             break
-    with open(f'{results_path}/nsga-II-results/pricess.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/prices1.json', "w") as file:
         json.dump(prices, file)
-    with open(f'{results_path}/nsga-II-results/results.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/results1.json', "w") as file:
         json.dump(battery_charges, file)
