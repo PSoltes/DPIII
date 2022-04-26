@@ -1,11 +1,5 @@
 from re import VERBOSE
 import numpy as np
-from pymoo.core.problem import Problem
-from pymoo.core.sampling import Sampling
-from pymoo.core.crossover import Crossover
-from pymoo.core.mutation import Mutation
-from pymoo.core.population import Population
-from pymoo.core.duplicate import ElementwiseDuplicateElimination
 import pandas as pd
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.factory import get_crossover, get_termination
@@ -21,10 +15,10 @@ if __name__ == "__main__":
     prices = []
     battery_charges = [0]
     solar_df = pd.read_csv(
-        f'{data_path}/661/2_day_scenarios/fuzzied_solar_scenario_0.csv', index_col='localminute')
+        f'{data_path}/661/2_day_scenarios/fuzzied_solar_scenario_3.csv', index_col='localminute')
     consumption_df = pd.read_csv(
-        f'{data_path}/661/2_day_scenarios/fuzzied_energy_consumption_scenario_0.csv', index_col='localminute')
-    prices_df = pd.read_csv(f'{data_path}/661/2_day_scenarios/scenario_0.csv',
+        f'{data_path}/661/2_day_scenarios/fuzzied_energy_consumption_scenario_3.csv', index_col='localminute')
+    prices_df = pd.read_csv(f'{data_path}/661/2_day_scenarios/scenario_3.csv',
                             index_col='localminute')
     prices_series = prices_df['lmp_avg']
     j = 0
@@ -34,6 +28,9 @@ if __name__ == "__main__":
         timewindow_prices = prices_series[j:j + 192].values
         original_loads = consumption_df.loc[index].to_list()
         original_solar = row.to_list()
+        loads_scenarios = []
+        solar_scenarios = []
+        grid_availability = []
         (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
             9, original_loads, original_solar)
         loads_scenarios.append(original_loads)
@@ -66,7 +63,7 @@ if __name__ == "__main__":
                        save_history=True,
                        verbose=False)
         res_F = res.F.tolist()
-        res_F_prices = [x[0] for x in res_F] if res.F.ndim == 2 else [res_F[0]]
+        res_F_prices = [x[0] for x in list(filter(lambda x: x[2] == 0, res_F))] if res.F.ndim == 2 else [res_F[0]]
         best_price_index = res_F_prices.index(max(res_F_prices))
         prices.append(res_F)
         if res.X is not None:
@@ -76,11 +73,11 @@ if __name__ == "__main__":
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        with open(f'{results_path}/nsga-II-results/resultsxx.json', "w") as file:
+        with open(f'{results_path}/nsga-II-results/non_scenarios_results_scenario_3xx.json', "w") as file:
             json.dump(battery_charges, file)
-        if j > 191:
+        if j > 10:
             break
-    with open(f'{results_path}/nsga-II-results/pricesxx.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/non_scenarios_prices_scenario_3xx.json', "w") as file:
         json.dump(prices, file)
-    with open(f'{results_path}/nsga-II-results/resultsxx.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/non_scenarios_results_scenario_3xx.json', "w") as file:
         json.dump(battery_charges, file)
