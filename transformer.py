@@ -93,15 +93,15 @@ def assign_el_prices_to_1min_aggs(data_ids, path_to_lmp, path_to_spp):
         data_df.to_csv(f'{data_path}/{id}/aggs_data.csv', index=False)
 
 
-def get_fuzzied_data(path, col, file_name):
+def get_fuzzied_data(path, col, file_name, min_val = 0):
     df = pd.read_csv(f'{path}/{file_name}')
     fuzzied_df = pd.DataFrame(columns=['localminute'] + list(range(0,192)))
     first = [df[col][0].tolist()]
-    first_hour = array([random.normal(x, 0)
+    first_hour = array([max(min_val, random.normal(x, 0))
                         for x in df[col][1:4]]).tolist()
-    first_4_hours = array([random.normal(x, 0)
+    first_4_hours = array([max(min_val, random.normal(x, 0))
                             for x in df[col][4:16]]).tolist()
-    rest = array([random.normal(x, 0)
+    rest = array([max(min_val, random.normal(x, 0))
                     for x in df[col][16:192]]).tolist()
     row = [round(x, 3) for x in (first + first_hour + first_4_hours + rest)]
     indexed_row = [df['localminute'][0]] + row
@@ -112,9 +112,9 @@ def get_fuzzied_data(path, col, file_name):
     j = 1
     while j < len(df[col]) - 192:
         first = [df[col][j].tolist()]
-        first_hour = first_hour[1:] + [random.normal(df[col][j + 3], abs(df[col][j + 3] * 0.15))]
-        first_4_hours = first_4_hours[1:] + [random.normal(df[col][j + 15], abs(df[col][j + 15] * 0.25))]
-        rest = rest[1:] + [random.normal(df[col][j + 191], abs(df[col][j + 191] * 0.5))]
+        first_hour = first_hour[1:] + [max(min_val, random.normal(df[col][j + 3], abs(df[col][j + 3] * 0.15)))]
+        first_4_hours = first_4_hours[1:] + [max(min_val, random.normal(df[col][j + 15], abs(df[col][j + 15] * 0.25)))]
+        rest = rest[1:] + [max(min_val, random.normal(df[col][j + 191], abs(df[col][j + 191] * 0.5)))]
         row = [round(x, 3) for x in (first + first_hour + first_4_hours + rest)]
         indexed_row = [df['localminute'][j]] + row
         data_to_append = {}
@@ -179,6 +179,6 @@ if __name__ == "__main__":
     unique_data_ids = [661, 1642, 2335, 2818, 3039, 3456, 3538, 4031, 4373, 4767, 5746, 6139, 7536, 7719,
                        7800, 7901, 7951, 8565, 9019, 9278, 8156, 8386, 2361, 9922, 9160]
     for i in range(25):
-        get_fuzzied_data(f'{data_path}/661/2_day_scenarios', 'solar', f'scenario_{i}.csv')
+        get_fuzzied_data(f'{data_path}/661/2_day_scenarios', 'energy_consumption', f'scenario_{i}.csv', 0)
 
 #'./el_prices/lmp.csv', './el_prices/spp.csv'
