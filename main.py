@@ -11,14 +11,14 @@ from scenarios import create_scenarios
 data_path = '../data'
 results_path = '../results'
 
-if __name__ == "__main__":
+def optimize_scenario(scenario_number):
     prices = []
     battery_charges = [0]
     solar_df = pd.read_csv(
-        f'{data_path}/661/2_day_scenarios/fuzzied_solar_scenario_3.csv', index_col='localminute')
+        f'{data_path}/661/2_day_scenarios/fuzzied_solar_scenario_{scenario_number}.csv', index_col='localminute')
     consumption_df = pd.read_csv(
-        f'{data_path}/661/2_day_scenarios/fuzzied_energy_consumption_scenario_3.csv', index_col='localminute')
-    prices_df = pd.read_csv(f'{data_path}/661/2_day_scenarios/scenario_3.csv',
+        f'{data_path}/661/2_day_scenarios/fuzzied_energy_consumption_scenario_{scenario_number}.csv', index_col='localminute')
+    prices_df = pd.read_csv(f'{data_path}/661/2_day_scenarios/scenario_{scenario_number}.csv',
                             index_col='localminute')
     prices_series = prices_df['lmp_avg']
     j = 0
@@ -31,8 +31,8 @@ if __name__ == "__main__":
         loads_scenarios = []
         solar_scenarios = []
         grid_availability = []
-        (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
-            9, original_loads, original_solar)
+        # (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
+        #     9, original_loads, original_solar)
         loads_scenarios.append(original_loads)
         solar_scenarios.append(original_solar)
         grid_availability.append(np.full(len(original_loads), True).tolist())
@@ -73,11 +73,16 @@ if __name__ == "__main__":
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        with open(f'{results_path}/nsga-II-results/non_scenarios_results_scenario_3xx.json', "w") as file:
+        with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
             json.dump(battery_charges, file)
-        if j > 10:
+        if j > 192:
             break
-    with open(f'{results_path}/nsga-II-results/non_scenarios_prices_scenario_3xx.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_prices_scenario_{scenario_number}.json', "w") as file:
         json.dump(prices, file)
-    with open(f'{results_path}/nsga-II-results/non_scenarios_results_scenario_3xx.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
         json.dump(battery_charges, file)
+
+
+if __name__ == "__main__":
+    optimize_scenario(10)
+    

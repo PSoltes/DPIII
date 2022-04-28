@@ -4,6 +4,7 @@ from pymoo.core.sampling import Sampling
 from pymoo.core.mutation import Mutation
 from pymoo.core.duplicate import ElementwiseDuplicateElimination
 import json
+from decimal import Decimal, ROUND_HALF_EVEN
 
 data_path = '../data'
 results_path = '../results'
@@ -223,10 +224,15 @@ class SingleCOE(Problem):
             [maximal_charge_rate_for_each_scenario, total_power_in_system_condition_for_each_scenario])
 
     def total_power_in_system_condition(self, bat_status, solar, grid_loads):
-        if solar[0] + grid_loads[0] < bat_status[0] - self.initial_battery_charge:
+        first = Decimal(solar[0] + grid_loads[0]).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
+        second = Decimal(bat_status[0] - self.initial_battery_charge).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
+
+        if first.compare(second) == -1:
             return 1
         for i in range(len(bat_status) - 1):
-            if solar[i + 1] + grid_loads[i + 1] < bat_status[i + 1] - bat_status[i]:
+            first = Decimal(solar[i + 1] + grid_loads[i + 1]).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
+            second = Decimal(bat_status[i + 1] - bat_status[i]).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
+            if first.compare(second) == -1:
                 print(solar[i + 1], grid_loads[i + 1], bat_status[i + 1], bat_status[i])
                 return 1
         return 0
