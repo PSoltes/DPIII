@@ -71,6 +71,7 @@ class MyMutation(Mutation):
                 low=interval[0], high=interval[1])
         else:
             return second_interval_middle
+        
 
     def _do(self, problem, X, **kwargs):
         rng = np.random.default_rng()
@@ -89,7 +90,7 @@ class MyMutation(Mutation):
                 for j in range(len(X[i])):
                     is_grid_available = all(
                         column(problem.grid_availability, j))
-                    min_solar_value = min(column(problem.solar, j))
+                    min_solar_value = max(0, min(column(problem.solar, j)))
                     first_interval_middle = 0
                     if j == 0:
                         first_interval_middle = problem.initial_battery_charge
@@ -117,12 +118,18 @@ class MySampling(Sampling):
             bat = []
             for j in range(problem.n_var):
                 next_value = 0
+                is_grid_available = all(
+                        column(problem.grid_availability, j))
+                min_solar_value = min(column(problem.solar, j))
+                min_load_value = min(column(problem.loads, j))
+                high = charge_rate_bounds[1] if is_grid_available == True else min(min_solar_value, charge_rate_bounds[1])
+                low = charge_rate_bounds[0] if is_grid_available == True else max(charge_rate_bounds[0], min_solar_value - min_load_value)
                 if j == 0:
                     next_value = problem.initial_battery_charge + rng.uniform(
-                        low=charge_rate_bounds[0], high=charge_rate_bounds[1])
+                        low=low, high=high)
                 else:
                     next_value = bat[j-1] + rng.uniform(
-                        low=charge_rate_bounds[0], high=charge_rate_bounds[1])
+                        low=low, high=high)
                 bat.append(
                     max(0, min(problem.battery_params['max_total_energy'], next_value)))
             X[i] = bat
@@ -233,7 +240,7 @@ class SingleCOE(Problem):
             first = Decimal(solar[i + 1] + grid_loads[i + 1]).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
             second = Decimal(bat_status[i + 1] - bat_status[i]).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)
             if first.compare(second) == -1:
-                print(solar[i + 1], grid_loads[i + 1], bat_status[i + 1], bat_status[i])
+                # print(solar[i + 1], grid_loads[i + 1], bat_status[i], bat_status[i + 1])
                 return 1
         return 0
 

@@ -31,8 +31,8 @@ def optimize_scenario(scenario_number):
         loads_scenarios = []
         solar_scenarios = []
         grid_availability = []
-        # (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
-        #     9, original_loads, original_solar)
+        (loads_scenarios, solar_scenarios, grid_availability) = create_scenarios(
+            9, original_loads, original_solar)
         loads_scenarios.append(original_loads)
         solar_scenarios.append(original_solar)
         grid_availability.append(np.full(len(original_loads), True).tolist())
@@ -55,7 +55,7 @@ def optimize_scenario(scenario_number):
             eliminate_duplicates=MyDuplicateElimination(),
         )
 
-        termination = get_termination("time", "00:00:05")
+        termination = get_termination("time", "00:02:25")
         res = minimize(problem,
                        algorithm,
                        termination,
@@ -73,16 +73,16 @@ def optimize_scenario(scenario_number):
             # np.savetxt(f'./nsga-II-results/results_{i}.csv', result_list, delimiter=",")
         j += 1
         print(j)
-        with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
+        with open(f'{results_path}/nsga-II-results/scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
             json.dump(battery_charges, file)
-        if j > 192:
+        if j > 191:
             break
-    with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_prices_scenario_{scenario_number}.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/scenarios_non_outage_prices_scenario_{scenario_number}.json', "w") as file:
         json.dump(prices, file)
-    with open(f'{results_path}/nsga-II-results/non_scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
+    with open(f'{results_path}/nsga-II-results/scenarios_non_outage_results_scenario_{scenario_number}.json', "w") as file:
         json.dump(battery_charges, file)
 
 
 if __name__ == "__main__":
-    optimize_scenario(10)
+    optimize_scenario(0)
     
