@@ -84,5 +84,5 @@ def optimize_scenario(scenario_number):
 
 
 if __name__ == "__main__":
-    optimize_scenario(0)
+    optimize_scenario(18)
     

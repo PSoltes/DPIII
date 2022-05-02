@@ -120,7 +120,7 @@ class MySampling(Sampling):
                 next_value = 0
                 is_grid_available = all(
                         column(problem.grid_availability, j))
-                min_solar_value = min(column(problem.solar, j))
+                min_solar_value = max(0, min(column(problem.solar, j)))
                 min_load_value = min(column(problem.loads, j))
                 high = charge_rate_bounds[1] if is_grid_available == True else min(min_solar_value, charge_rate_bounds[1])
                 low = charge_rate_bounds[0] if is_grid_available == True else max(charge_rate_bounds[0], min_solar_value - min_load_value)
