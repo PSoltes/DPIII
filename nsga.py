@@ -124,6 +124,8 @@ class MySampling(Sampling):
                 min_load_value = min(column(problem.loads, j))
                 high = charge_rate_bounds[1] if is_grid_available == True else min(min_solar_value, charge_rate_bounds[1])
                 low = charge_rate_bounds[0] if is_grid_available == True else max(charge_rate_bounds[0], min_solar_value - min_load_value)
+                if not Decimal(low).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN).compare(Decimal(low).quantize(Decimal(1.000000), rounding=ROUND_HALF_EVEN)) == -1:
+                    low = high
                 if j == 0:
                     next_value = problem.initial_battery_charge + rng.uniform(
                         low=low, high=high)
